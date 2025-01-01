@@ -27,6 +27,7 @@ group by b.CountryRegionCode
 ''')
     
     for data in cursor:
+#display 3 columns
         print(data[0],data[1],data[2])
     
     
