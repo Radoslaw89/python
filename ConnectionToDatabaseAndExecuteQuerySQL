@@ -1,0 +1,34 @@
+#pip install pypyodbc
+
+import pyodbc
+try:
+    connection=pyodbc.connect('DRIVER={SQL SERVER};'+
+                          'SERVER={DESKTOP-8T539JV};'+        #server local name
+                          'DATABASE={AdventureWorks2022};'+   #dbname 
+                          'Trusted_Connection=True)')
+    cursor=connection.cursor()
+    cursor.execute('''
+
+with AllCompanies as
+                    (
+                      select 
+                      count(*) as CountCompanies
+                      from [Sales].[Customer] a (nolock)
+                      join [Sales].[SalesTerritory] b (nolock) on a.TerritoryID=b.TerritoryID 
+                    )
+
+select 
+count(*) as CountCompanies
+,b.CountryRegionCode, round(cast(count(*) as float)/(select * from AllCompanies)*100,2) PercentAllCountries
+from [Sales].[Customer] a (nolock)
+join [Sales].[SalesTerritory] b (nolock) on a.TerritoryID=b.TerritoryID 
+group by b.CountryRegionCode
+
+''')
+    
+    for data in cursor:
+        print(data[0],data[1],data[2])
+    
+    
+except pyodbc.Error as ex:
+    print('Failed:', ex)
