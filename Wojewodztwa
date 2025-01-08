@@ -1,0 +1,40 @@
+#step1#
+
+#pip install openpyxl 
+#pip install pandas
+
+import pandas as pd
+
+
+#directory .xlsx file to read: C:\Users\radas\Desktop\data\liczba_ludnosci.xlsx
+#this repo include file .xlsx
+
+#we can't use it one curve line
+#incorrect: C:\Users\radas\Desktop\data\liczba_ludnosci.xlsx
+#correct to read path: C:\\Users\\radas\\Desktop\\data\\liczba_ludnosci.xlsx
+
+#df = pd.read_excel('C:\\Users\\radas\\Desktop\\data\\liczba_ludnosci.xlsx', sheet_name='DANE', engine='openpyxl')
+#print(df[['Nazwa', 'Liczba ludności', 'Województwo', 'Województwo - liczba ludności']])
+#df
+
+df=pd.DataFrame(pd.read_excel('C:\\Users\\radas\\Desktop\\data\\liczba_ludnosci.xlsx', sheet_name='DANE', engine='openpyxl'))
+
+#removes columns
+
+df=df.drop(columns=['Stan na dzień','Rok'])
+df['%LudnoscToWojewodztwo']=round((df['Liczba ludności']/df['Województwo - liczba ludności'])*100,2)
+
+#we need remove double values (1996003+975023)
+
+df['%LudnoscToKraj']=round((df['Liczba ludności']/(df['Województwo - liczba ludności'].sum()-(1996003+975023)))*100,2)
+
+print(df['Liczba ludności'].sum())
+print(df['Województwo - liczba ludności'].sum()-(1996003+975023))
+print(round((df['Liczba ludności'].sum()/(df['Województwo - liczba ludności'].sum()-(1996003+975023)))*100,2))
+df
+
+#step2#
+
+#filtered result
+df=df[(df['Liczba ludności']>=250000) & (df['Województwo - liczba ludności']>=3000000)]
+df
