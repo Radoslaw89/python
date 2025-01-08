@@ -5,7 +5,6 @@
 
 import pandas as pd
 
-
 #directory .xlsx file to read: C:\Users\radas\Desktop\data\liczba_ludnosci.xlsx
 #this repo include file .xlsx
 
