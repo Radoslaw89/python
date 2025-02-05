@@ -1,3 +1,9 @@
+#The same results in [Update LongOfEmploymentAndAverageYearOfEmployee] but in SQL query in my repo
+#We want in result: 
+    #groupname column, avg years in the company and avg years of employee;
+    #I will join to SQL database, import data to Python, join queries, join 2 datasets, use group operation and get final result 
+
+
 import pandas as pd
 import pyodbc
 import numpy as np
@@ -9,15 +15,17 @@ conn = pyodbc.connect('DRIVER={SQL Server};'
                       'DATABASE=AdventureWorks2022;' #Microsoft demo database
                       'Trusted_Connection=True')  
 
+
+#first query to dataset_1
 query_1 = """
 select BusinessEntityID, JobTitle,BirthDate, MaritalStatus, Gender, HireDate, VacationHours, SickLeaveHours 
 from [HumanResources].[Employee] (nolock)
 """
-
+#second query to dataset_1
 query_2="""
 select departmentid, name, groupname from [HumanResources].[Department] (nolock)
 """
-
+#third query to dataset_1 and dataset_2
 query_3="""
 select BusinessEntityID, DepartmentID from [HumanResources].[EmployeeDepartmentHistory] (nolock)
 """
