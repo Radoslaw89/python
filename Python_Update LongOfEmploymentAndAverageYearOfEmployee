@@ -1,0 +1,147 @@
+import pandas as pd
+import pyodbc
+import numpy as np
+from dateutil.relativedelta import relativedelta as rd
+
+#connection to SQL Server (localhost) 
+conn = pyodbc.connect('DRIVER={SQL Server};'
+                      'SERVER=DESKTOP-8T539JV;'
+                      'DATABASE=AdventureWorks2022;' #Microsoft demo database
+                      'Trusted_Connection=True')  
+
+query_1 = """
+select BusinessEntityID, JobTitle,BirthDate, MaritalStatus, Gender, HireDate, VacationHours, SickLeaveHours 
+from [HumanResources].[Employee] (nolock)
+"""
+
+query_2="""
+select departmentid, name, groupname from [HumanResources].[Department] (nolock)
+"""
+
+query_3="""
+select BusinessEntityID, DepartmentID from [HumanResources].[EmployeeDepartmentHistory] (nolock)
+"""
+
+#read_sql_statement
+df_1=pd.read_sql(query_1, conn)
+df_2=pd.read_sql(query_2, conn) 
+df_3=pd.read_sql(query_3, conn)
+
+#define columns
+df_1.columns=['BusinessEntityID', 'JobTitle','BirthDate', 'MaritalStatus', 'Gender', 'HireDate', 'VacationHours', 'SickLeaveHours']
+df_2.columns=['departmentid', 'name', 'groupname']
+df_3.columns=['BusinessEntityID', 'DepartmentID']
+
+#create dataframes
+df1=pd.DataFrame(df_1)
+df2=pd.DataFrame(df_2)
+df3=pd.DataFrame(df_3)
+
+#df1
+#df2
+#df3
+
+#equivalent sql joins
+inner_join_1=pd.merge(df3, df_1, on='BusinessEntityID', how='inner')
+inner_join_2=pd.merge(inner_join_1, df2, left_on='DepartmentID', right_on='departmentid', how='inner')
+inner_join_2=inner_join_2.drop(columns=['BusinessEntityID', 'DepartmentID','departmentid'])
+inner_join_2['Today']=pd.Timestamp('today')
+inner_join_2['Today']=pd.to_datetime(inner_join_2['Today']).dt.strftime('%Y-%m-%d')
+inner_join_2['Today']=pd.to_datetime(inner_join_2['Today'])
+inner_join_2['HireDate']=pd.to_datetime(inner_join_2['HireDate'])
+
+#inner_join_2.info()
+
+#step2
+inner_join_2['LoE - in years']=(inner_join_2['Today']-inner_join_2['HireDate']).dt.days/365 #alternative solution - to remove
+    
+    #we can df['floor'] = np.floor(df['values']) or df['ceiling'] = np.ceil(df['values'])
+    
+inner_join_2['LoE - in years2']=np.floor((inner_join_2['Today']-inner_join_2['HireDate']).dt.days/30) #alternative solution - to remove
+
+inner_join_2['LoE1']=inner_join_2.apply(lambda row: rd(row['Today'], row['HireDate']), axis=1).apply(lambda x: x.years)
+inner_join_2['LoE2']=inner_join_2.apply(lambda row: rd(row['Today'], row['HireDate']), axis=1).apply(lambda x: x.months)
+inner_join_2['LoE3']=inner_join_2.apply(lambda row: rd(row['Today'], row['HireDate']), axis=1).apply(lambda x: x.days)
+
+    #if inner_join_2['LoE3']>0 we need to add 1 month to LoE2, because it is next month 
+    #for example: [LoE1]=2 (years), [LoE2]=0 (months), [LoE3]=1 (days) it is formally: [LoE1]=2 (years), [LoE2]=1 (months) 
+
+inner_join_2['LoE - months']=np.where(inner_join_2['LoE3']==0, inner_join_2['LoE2'], inner_join_2['LoE2']+1)
+inner_join_2['LoE - years']=np.where(inner_join_2['LoE - months']<=12, inner_join_2['LoE1'], inner_join_2['LoE1']+1)
+
+#step3 - remove useless columns
+
+inner_join_2.drop(columns=['JobTitle','BirthDate','MaritalStatus','Gender','HireDate','VacationHours','SickLeaveHours','name'], inplace=True)
+inner_join_2.drop(columns=['LoE - in years2','LoE1','LoE2','LoE3'], inplace=True)
+inner_join_2.drop(columns=['Today'], inplace=True)
+
+#inner_join_2
+
+group_1=inner_join_2.groupby(['groupname'])
+
+category_multi_agg=group_1.agg({
+    'LoE - in years':['mean'], 
+    'LoE - months':['mean'],  
+    'LoE - years':['mean']
+})
+
+#rounding
+category_multi_agg['LoE - in years']=round(category_multi_agg['LoE - in years'],0)
+category_multi_agg['LoE - years']=round(category_multi_agg['LoE - years'],2)
+category_multi_agg['LoE - months']=round(category_multi_agg['LoE - months'],0)
+#category_multi_agg['LoE - most accurate']=round(category_multi_agg['LoE - months'],0)
+#round(category_multi_agg['LoE - years'],2){}
+
+category_multi_agg['Years and months']=(np.floor(category_multi_agg['LoE - years']).round(0).astype(str))+" years "+(category_multi_agg['LoE - months'].astype(str))+ " months"
+#category_multi_agg
+
+
+
+query_4 = """
+select BusinessEntityID, BirthDate
+from [HumanResources].[Employee] (nolock)
+"""
+
+query_5="""
+select departmentid, groupname from [HumanResources].[Department] (nolock)
+"""
+
+#read_sql_statement
+df_4=pd.read_sql(query_4, conn)
+df_5=pd.read_sql(query_5, conn) 
+
+#define columns
+df_4.columns=['BusinessEntityID', 'BirthDate']
+df_5.columns=['departmentid', 'groupname']
+
+#create dataframes
+df4=pd.DataFrame(df_4)
+df5=pd.DataFrame(df_5)
+
+inner_join_4=pd.merge(df4, df_3, on='BusinessEntityID', how='inner')
+inner_join_5=pd.merge(inner_join_4, df5, left_on='DepartmentID', right_on='departmentid', how='inner')
+
+inner_join_5.drop(columns=['BusinessEntityID','DepartmentID','departmentid'], inplace=True)
+inner_join_5['Today']=pd.to_datetime(pd.Timestamp('today'))
+inner_join_5['BirthDate']=pd.to_datetime(inner_join_5['BirthDate'])
+inner_join_5['YearOfEmployee']=inner_join_5.apply(lambda row: rd(row['Today'], row['BirthDate']), axis=1).apply(lambda x: x.years)
+
+#inner_join_5
+
+inner_join_5.drop(columns=['BirthDate','Today'], inplace=True)
+
+inner_join_5
+group_2=inner_join_5.groupby(['groupname'])
+
+category_multi_agg_2=round(group_2.agg({
+    'YearOfEmployee':['mean']
+}),0)
+
+#category_multi_agg_2
+
+
+#join 2 big data sets
+inner_join_big=pd.merge(category_multi_agg, category_multi_agg_2, left_on='groupname', right_on='groupname', how='inner')
+
+#final results
+inner_join_big
