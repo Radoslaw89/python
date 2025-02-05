@@ -29,6 +29,7 @@ select departmentid, name, groupname from [HumanResources].[Department] (nolock)
 query_3="""
 select BusinessEntityID, DepartmentID from [HumanResources].[EmployeeDepartmentHistory] (nolock)
 """
+    #begin code to dataset_1
 
 #read_sql_statement
 df_1=pd.read_sql(query_1, conn)
@@ -45,16 +46,11 @@ df1=pd.DataFrame(df_1)
 df2=pd.DataFrame(df_2)
 df3=pd.DataFrame(df_3)
 
-#df1
-#df2
-#df3
-
 #equivalent sql joins
 inner_join_1=pd.merge(df3, df_1, on='BusinessEntityID', how='inner')
 inner_join_2=pd.merge(inner_join_1, df2, left_on='DepartmentID', right_on='departmentid', how='inner')
 inner_join_2=inner_join_2.drop(columns=['BusinessEntityID', 'DepartmentID','departmentid'])
 inner_join_2['Today']=pd.Timestamp('today')
-inner_join_2['Today']=pd.to_datetime(inner_join_2['Today']).dt.strftime('%Y-%m-%d')
 inner_join_2['Today']=pd.to_datetime(inner_join_2['Today'])
 inner_join_2['HireDate']=pd.to_datetime(inner_join_2['HireDate'])
 
@@ -83,8 +79,7 @@ inner_join_2.drop(columns=['JobTitle','BirthDate','MaritalStatus','Gender','Hire
 inner_join_2.drop(columns=['LoE - in years2','LoE1','LoE2','LoE3'], inplace=True)
 inner_join_2.drop(columns=['Today'], inplace=True)
 
-#inner_join_2
-
+#grouping set
 group_1=inner_join_2.groupby(['groupname'])
 
 category_multi_agg=group_1.agg({
@@ -103,7 +98,8 @@ category_multi_agg['LoE - months']=round(category_multi_agg['LoE - months'],0)
 category_multi_agg['Years and months']=(np.floor(category_multi_agg['LoE - years']).round(0).astype(str))+" years "+(category_multi_agg['LoE - months'].astype(str))+ " months"
 #category_multi_agg
 
-
+    #end code to dataset_1
+    #begin code to dataset_2
 
 query_4 = """
 select BusinessEntityID, BirthDate
@@ -113,7 +109,6 @@ from [HumanResources].[Employee] (nolock)
 query_5="""
 select departmentid, groupname from [HumanResources].[Department] (nolock)
 """
-
 #read_sql_statement
 df_4=pd.read_sql(query_4, conn)
 df_5=pd.read_sql(query_5, conn) 
@@ -126,19 +121,20 @@ df_5.columns=['departmentid', 'groupname']
 df4=pd.DataFrame(df_4)
 df5=pd.DataFrame(df_5)
 
+#join
 inner_join_4=pd.merge(df4, df_3, on='BusinessEntityID', how='inner')
 inner_join_5=pd.merge(inner_join_4, df5, left_on='DepartmentID', right_on='departmentid', how='inner')
 
+#convert and difference
 inner_join_5.drop(columns=['BusinessEntityID','DepartmentID','departmentid'], inplace=True)
 inner_join_5['Today']=pd.to_datetime(pd.Timestamp('today'))
 inner_join_5['BirthDate']=pd.to_datetime(inner_join_5['BirthDate'])
 inner_join_5['YearOfEmployee']=inner_join_5.apply(lambda row: rd(row['Today'], row['BirthDate']), axis=1).apply(lambda x: x.years)
 
-#inner_join_5
-
+#remove useless column
 inner_join_5.drop(columns=['BirthDate','Today'], inplace=True)
 
-inner_join_5
+#grouping dataset_2
 group_2=inner_join_5.groupby(['groupname'])
 
 category_multi_agg_2=round(group_2.agg({
@@ -147,6 +143,7 @@ category_multi_agg_2=round(group_2.agg({
 
 #category_multi_agg_2
 
+        #end code to dataset_2
 
 #join 2 big data sets
 inner_join_big=pd.merge(category_multi_agg, category_multi_agg_2, left_on='groupname', right_on='groupname', how='inner')
