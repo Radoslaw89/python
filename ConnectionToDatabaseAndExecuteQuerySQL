@@ -4,7 +4,7 @@ import pyodbc
 try:
     connection=pyodbc.connect('DRIVER={SQL SERVER};'+
                           'SERVER={DESKTOP-8T539JV};'+        #server local name
-                          'DATABASE={AdventureWorks2022};'+   #dbname 
+                          'DATABASE={AdventureWorks2022};'+   #Microsoft demo database 
                           'Trusted_Connection=True)')
     cursor=connection.cursor()
     cursor.execute('''
